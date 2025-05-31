@@ -6,9 +6,9 @@
   <style>
     body {
       font-family: sans-serif;
-      background: #f0f8ff;
       text-align: center;
       padding: 30px;
+      transition: background 0.5s;
     }
     h1 {
       color: #333;
@@ -20,10 +20,19 @@
     }
     #message {
       margin-top: 20px;
-      font-size: 20px;
+      font-size: 22px;
+      font-weight: bold;
       color: #006400;
     }
-    #score, #highscores {
+    #message.animate {
+      animation: pop 0.6s ease;
+    }
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.4); color: gold; }
+      100% { transform: scale(1); }
+    }
+    #score, #highscores, #timer {
       margin-top: 20px;
       font-size: 16px;
       color: #555;
@@ -31,6 +40,16 @@
     .level-button {
       margin: 5px;
       background: #ddd;
+      border: none;
+      cursor: pointer;
+    }
+    .active {
+      background-color: #90ee90;
+      font-weight: bold;
+    }
+    #highscores ul {
+      list-style: none;
+      padding-left: 0;
     }
   </style>
 </head>
@@ -38,43 +57,74 @@
   <h1>数当てゲーム</h1>
 
   <div>
-    <button class="level-button" onclick="setLevel('easy')">易しい（1〜100）</button>
-    <button class="level-button" onclick="setLevel('normal')">普通（1〜300）</button>
-    <button class="level-button" onclick="setLevel('hard')">難しい（1〜500）</button>
+    <button id="btn_easy" class="level-button" onclick="playClick(); setLevel('easy')">易しい（1〜100）</button>
+    <button id="btn_normal" class="level-button" onclick="playClick(); setLevel('normal')">普通（1〜300）</button>
+    <button id="btn_hard" class="level-button" onclick="playClick(); setLevel('hard')">難しい（1〜500）</button>
   </div>
 
   <p id="rangeDisplay">1〜100の数字を当ててください</p>
   <input type="number" id="guess" placeholder="数字を入力" />
-  <button onclick="check()">決定！</button>
+  <button onclick="playClick(); check()">決定！</button>
   <div id="message"></div>
   <div id="score">試行回数: <span id="attempts">0</span></div>
+  <div id="timer">経過時間: <span id="time">0</span>秒</div>
   <div id="highscores">
-    <h3>ハイスコア</h3>
+    <h3>ハイスコア・記録</h3>
     <ul>
-      <li>易しい: <span id="high_easy">記録なし</span></li>
-      <li>普通: <span id="high_normal">記録なし</span></li>
-      <li>難しい: <span id="high_hard">記録なし</span></li>
+      <li>易しい: <span id="high_easy">記録なし</span> / 平均: <span id="avg_easy">記録なし</span>回 / ベストタイム: <span id="besttime_easy">記録なし</span>秒</li>
+      <li>普通: <span id="high_normal">記録なし</span> / 平均: <span id="avg_normal">記録なし</span>回 / ベストタイム: <span id="besttime_normal">記録なし</span>秒</li>
+      <li>難しい: <span id="high_hard">記録なし</span> / 平均: <span id="avg_hard">記録なし</span>回 / ベストタイム: <span id="besttime_hard">記録なし</span>秒</li>
     </ul>
   </div>
+
+  <!-- 効果音 -->
+  <audio id="correctSound" src="https://soundeffect-lab.info/sound/anime/mp3/decision22.mp3" preload="auto"></audio>
+  <audio id="wrongSound" src="https://soundeffect-lab.info/sound/voice/mp3/bubu1.mp3" preload="auto"></audio>
+  <audio id="clickSound" src="https://soundeffect-lab.info/sound/various/mp3/button01.mp3" preload="auto"></audio>
 
   <script>
     let answer = 0;
     let attempts = 0;
     let maxNumber = 100;
     let level = 'easy';
+    let startTime = 0;
+    let timerInterval;
+
+    function playClick() {
+      document.getElementById("clickSound").play();
+    }
 
     function setLevel(selectedLevel) {
       level = selectedLevel;
       attempts = 0;
       document.getElementById("attempts").textContent = attempts;
+      document.getElementById("message").textContent = "";
+      document.getElementById("message").classList.remove("animate");
 
-      if (level === 'easy') maxNumber = 100;
-      else if (level === 'normal') maxNumber = 300;
-      else if (level === 'hard') maxNumber = 500;
+      if (level === 'easy') {
+        maxNumber = 100;
+        document.body.style.background = "#ccffcc";
+      } else if (level === 'normal') {
+        maxNumber = 300;
+        document.body.style.background = "#fffaa0";
+      } else if (level === 'hard') {
+        maxNumber = 500;
+        document.body.style.background = "#ffcccc";
+      }
 
       answer = Math.floor(Math.random() * maxNumber) + 1;
       document.getElementById("rangeDisplay").textContent = `1〜${maxNumber}の数字を当ててください`;
-      document.getElementById("message").textContent = "";
+
+      updateButtonStyles();
+      resetTimer();
+      startTimer();
+    }
+
+    function updateButtonStyles() {
+      ['easy', 'normal', 'hard'].forEach(lv => {
+        const btn = document.getElementById(`btn_${lv}`);
+        btn.classList.toggle('active', lv === level);
+      });
     }
 
     function check() {
@@ -88,29 +138,82 @@
       document.getElementById("attempts").textContent = attempts;
 
       if (guess === answer) {
-        document.getElementById("message").textContent = `正解！${attempts}回で当てました🎉`;
-        saveHighScore(level, attempts);
-      } else if (guess < answer) {
-        document.getElementById("message").textContent = "もっと大きいです";
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        document.getElementById("message").textContent = `正解！${attempts}回で当てました🎉 (${elapsed}秒)`;
+        document.getElementById("correctSound").play();
+        document.getElementById("message").classList.add("animate");
+        clearInterval(timerInterval);
+        saveHighScore(level, attempts, elapsed);
       } else {
-        document.getElementById("message").textContent = "もっと小さいです";
+        document.getElementById("message").textContent = guess < answer ? "もっと大きいです" : "もっと小さいです";
+        document.getElementById("wrongSound").play();
       }
+      document.getElementById("guess").value = "";
+      document.getElementById("guess").focus();
     }
 
-    function saveHighScore(level, currentAttempts) {
-      const key = `highscore_${level}`;
-      const existing = localStorage.getItem(key);
+    // ハイスコア・平均・ベストタイムを保存
+    function saveHighScore(level, currentAttempts, clearTime) {
+      const keyScore = `highscore_${level}`;
+      const keyData = `scoreData_${level}`;
+      const keyBestTime = `besttime_${level}`;
+
+      // ハイスコア（最小試行回数）
+      const existing = localStorage.getItem(keyScore);
       if (!existing || currentAttempts < parseInt(existing)) {
-        localStorage.setItem(key, currentAttempts);
+        localStorage.setItem(keyScore, currentAttempts);
       }
+
+      // ベストタイム（最速秒数）
+      const bestTime = localStorage.getItem(keyBestTime);
+      if (!bestTime || clearTime < parseInt(bestTime)) {
+        localStorage.setItem(keyBestTime, clearTime);
+      }
+
+      // 試行回数履歴に追加
+      let data = localStorage.getItem(keyData);
+      let arr = data ? JSON.parse(data) : [];
+      arr.push(currentAttempts);
+      localStorage.setItem(keyData, JSON.stringify(arr));
+
       showHighScores();
     }
 
+    // 平均スコアを取得
+    function getAverageScore(level) {
+      const data = localStorage.getItem(`scoreData_${level}`);
+      if (!data) return null;
+      const arr = JSON.parse(data);
+      if (arr.length === 0) return null;
+      const sum = arr.reduce((acc, val) => acc + val, 0);
+      return (sum / arr.length).toFixed(2);
+    }
+
+    // ハイスコア・平均スコア・ベストタイムを画面に表示
     function showHighScores() {
       ['easy', 'normal', 'hard'].forEach(level => {
         const score = localStorage.getItem(`highscore_${level}`);
         document.getElementById(`high_${level}`).textContent = score ? `${score}回` : "記録なし";
+
+        const avg = getAverageScore(level);
+        document.getElementById(`avg_${level}`).textContent = avg ? `${avg}回` : "記録なし";
+
+        const bestTime = localStorage.getItem(`besttime_${level}`);
+        document.getElementById(`besttime_${level}`).textContent = bestTime ? `${bestTime}秒` : "記録なし";
       });
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        document.getElementById("time").textContent = elapsed;
+      }, 1000);
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      document.getElementById("time").textContent = "0";
     }
 
     // 初期化
