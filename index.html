@@ -13,13 +13,12 @@
     }
     h1 {
       color: #333;
-      font-size: 2rem;
     }
     input, button {
-      padding: 10px 20px;
+      padding: 10px;
       font-size: 18px;
-      margin: 10px 5px;
-      border-radius: 6px;
+      margin: 5px;
+      max-width: 90vw;
     }
     #message {
       margin-top: 20px;
@@ -54,68 +53,52 @@
       list-style: none;
       padding-left: 0;
     }
+    .hidden {
+      display: none;
+    }
 
-    /* スマホ用スタイル */
     @media (max-width: 600px) {
       h1 {
-        font-size: 1.6rem;
+        font-size: 24px;
       }
       input, button {
-        width: 90%;
-        font-size: 20px;
-      }
-      .level-button {
-        display: block;
-        width: 90%;
-        margin: 10px auto;
-        font-size: 20px;
+        font-size: 16px;
+        padding: 8px;
       }
       #message {
-        font-size: 20px;
-      }
-      #score, #highscores, #timer {
         font-size: 18px;
       }
     }
-    </style>
+  </style>
 </head>
 <body>
   <h1>数当てゲーム</h1>
 
-  <!-- スタート画面 -->
-  <div id="startScreen">
-    <button onclick="playClick(); startGame()">🎮 ゲームスタート！</button>
+  <div>
+    <button id="btn_easy" class="level-button" onclick="setLevel('easy')">易しい（1〜100）</button>
+    <button id="btn_normal" class="level-button" onclick="setLevel('normal')">普通（1〜300）</button>
+    <button id="btn_hard" class="level-button" onclick="setLevel('hard')">難しい（1〜500）</button>
   </div>
 
-  <!-- ゲーム本体 -->
-  <div id="gameArea" style="display: none;">
-    <div>
-      <button id="btn_easy" class="level-button" onclick="playClick(); setLevel('easy')">易しい（1〜100）</button>
-      <button id="btn_normal" class="level-button" onclick="playClick(); setLevel('normal')">普通（1〜300）</button>
-      <button id="btn_hard" class="level-button" onclick="playClick(); setLevel('hard')">難しい（1〜500）</button>
-    </div>
+  <button id="startButton" onclick="startGame()">スタート</button>
 
+  <div id="gameArea" class="hidden">
     <p id="rangeDisplay">1〜100の数字を当ててください</p>
     <input type="number" id="guess" placeholder="数字を入力" />
-    <button onclick="playClick(); check()">決定！</button>
+    <button onclick="check()">決定！</button>
     <div id="message"></div>
     <div id="score">試行回数: <span id="attempts">0</span></div>
     <div id="timer">経過時間: <span id="time">0</span>秒</div>
-
-    <div id="highscores">
-      <h3>ハイスコア</h3>
-      <ul>
-        <li>易しい: <span id="high_easy">記録なし</span></li>
-        <li>普通: <span id="high_normal">記録なし</span></li>
-        <li>難しい: <span id="high_hard">記録なし</span></li>
-      </ul>
-    </div>
   </div>
 
-  <!-- 効果音 -->
-  <audio id="correctSound" src="https://soundeffect-lab.info/sound/anime/mp3/decision22.mp3" preload="auto"></audio>
-  <audio id="wrongSound" src="https://soundeffect-lab.info/sound/voice/mp3/bubu1.mp3" preload="auto"></audio>
-  <audio id="clickSound" src="https://soundeffect-lab.info/sound/various/mp3/button01.mp3" preload="auto"></audio>
+  <div id="highscores">
+    <h3>ハイスコア・記録</h3>
+    <ul>
+      <li>易しい: <span id="high_easy">記録なし</span> / 平均: <span id="avg_easy">記録なし</span>回 / ベストタイム: <span id="besttime_easy">記録なし</span>秒</li>
+      <li>普通: <span id="high_normal">記録なし</span> / 平均: <span id="avg_normal">記録なし</span>回 / ベストタイム: <span id="besttime_normal">記録なし</span>秒</li>
+      <li>難しい: <span id="high_hard">記録なし</span> / 平均: <span id="avg_hard">記録なし</span>回 / ベストタイム: <span id="besttime_hard">記録なし</span>秒</li>
+    </ul>
+  </div>
 
   <script>
     let answer = 0;
@@ -125,23 +108,8 @@
     let startTime = 0;
     let timerInterval;
 
-    function playClick() {
-      document.getElementById("clickSound").play();
-    }
-
-    function startGame() {
-      document.getElementById("startScreen").style.display = "none";
-      document.getElementById("gameArea").style.display = "block";
-      setLevel('easy');
-    }
-
     function setLevel(selectedLevel) {
       level = selectedLevel;
-      attempts = 0;
-      document.getElementById("attempts").textContent = attempts;
-      document.getElementById("message").textContent = "";
-      document.getElementById("message").classList.remove("animate");
-
       if (level === 'easy') {
         maxNumber = 100;
         document.body.style.background = "#ccffcc";
@@ -152,13 +120,8 @@
         maxNumber = 500;
         document.body.style.background = "#ffcccc";
       }
-
-      answer = Math.floor(Math.random() * maxNumber) + 1;
-      document.getElementById("rangeDisplay").textContent = `1〜${maxNumber}の数字を当ててください`;
-
       updateButtonStyles();
-      resetTimer();
-      startTimer();
+      document.getElementById("rangeDisplay").textContent = `1〜${maxNumber}の数字を当ててください`;
     }
 
     function updateButtonStyles() {
@@ -166,6 +129,17 @@
         const btn = document.getElementById(`btn_${lv}`);
         btn.classList.toggle('active', lv === level);
       });
+    }
+
+    function startGame() {
+      answer = Math.floor(Math.random() * maxNumber) + 1;
+      attempts = 0;
+      document.getElementById("attempts").textContent = attempts;
+      document.getElementById("message").textContent = "";
+      document.getElementById("guess").value = "";
+      document.getElementById("gameArea").classList.remove("hidden");
+      resetTimer();
+      startTimer();
     }
 
     function check() {
@@ -181,29 +155,58 @@
       if (guess === answer) {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         document.getElementById("message").textContent = `正解！${attempts}回で当てました🎉 (${elapsed}秒)`;
-        document.getElementById("correctSound").play();
         document.getElementById("message").classList.add("animate");
         clearInterval(timerInterval);
-        saveHighScore(level, attempts);
+        saveHighScore(level, attempts, elapsed);
       } else {
         document.getElementById("message").textContent = guess < answer ? "もっと大きいです" : "もっと小さいです";
-        document.getElementById("wrongSound").play();
       }
+      document.getElementById("guess").value = "";
+      document.getElementById("guess").focus();
     }
 
-    function saveHighScore(level, currentAttempts) {
-      const key = `highscore_${level}`;
-      const existing = localStorage.getItem(key);
+    function saveHighScore(level, currentAttempts, clearTime) {
+      const keyScore = `highscore_${level}`;
+      const keyData = `scoreData_${level}`;
+      const keyBestTime = `besttime_${level}`;
+
+      const existing = localStorage.getItem(keyScore);
       if (!existing || currentAttempts < parseInt(existing)) {
-        localStorage.setItem(key, currentAttempts);
+        localStorage.setItem(keyScore, currentAttempts);
       }
+
+      const bestTime = localStorage.getItem(keyBestTime);
+      if (!bestTime || clearTime < parseInt(bestTime)) {
+        localStorage.setItem(keyBestTime, clearTime);
+      }
+
+      let data = localStorage.getItem(keyData);
+      let arr = data ? JSON.parse(data) : [];
+      arr.push(currentAttempts);
+      localStorage.setItem(keyData, JSON.stringify(arr));
+
       showHighScores();
+    }
+
+    function getAverageScore(level) {
+      const data = localStorage.getItem(`scoreData_${level}`);
+      if (!data) return null;
+      const arr = JSON.parse(data);
+      if (arr.length === 0) return null;
+      const sum = arr.reduce((acc, val) => acc + val, 0);
+      return (sum / arr.length).toFixed(2);
     }
 
     function showHighScores() {
       ['easy', 'normal', 'hard'].forEach(level => {
         const score = localStorage.getItem(`highscore_${level}`);
         document.getElementById(`high_${level}`).textContent = score ? `${score}回` : "記録なし";
+
+        const avg = getAverageScore(level);
+        document.getElementById(`avg_${level}`).textContent = avg ? `${avg}回` : "記録なし";
+
+        const bestTime = localStorage.getItem(`besttime_${level}`);
+        document.getElementById(`besttime_${level}`).textContent = bestTime ? `${bestTime}秒` : "記録なし";
       });
     }
 
@@ -220,8 +223,9 @@
       document.getElementById("time").textContent = "0";
     }
 
-    // 初回ハイスコア読み込み
+    // 初期表示
+    setLevel('easy');
     showHighScores();
   </script>
-  </body>
+</body>
 </html>
