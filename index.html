@@ -2,81 +2,59 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>数当てゲーム（難易度付き）</title>
+  <title>数当てゲーム</title>
   <style>
     body {
       font-family: sans-serif;
-      background-color: #f9f9f9;
+      background: #f0f8ff;
       text-align: center;
-      padding: 50px;
+      padding: 30px;
     }
-    input, button, select {
-      padding: 10px;
-      font-size: 16px;
-      margin: 5px;
-    }
-    #result {
-      margin-top: 20px;
-      font-size: 18px;
+    h1 {
       color: #333;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 18px;
+      margin: 10px;
+    }
+    #message {
+      margin-top: 20px;
+      font-size: 20px;
+      color: #006400;
+    }
+    #score {
+      margin-top: 30px;
+      font-size: 16px;
+      color: #555;
     }
   </style>
 </head>
 <body>
-
-  <h1>🎮 数当てゲーム</h1>
-  <p>難易度を選んで、数字を当ててください！</p>
-
-  <label for="difficulty">難易度：</label>
-  <select id="difficulty" onchange="startGame()">
-    <option value="50">易（1〜50）</option>
-    <option value="200">中（1〜200）</option>
-    <option value="500">難（1〜500）</option>
-  </select>
-
-  <br><br>
-
-  <input type="number" id="guessInput" placeholder="数字を入力">
-  <button onclick="checkGuess()">予想！</button>
-  <button onclick="startGame()">リスタート</button>
-
-  <div id="result"></div>
+  <h1>数当てゲーム</h1>
+  <p>1〜100の数字を当ててください</p>
+  <input type="number" id="guess" placeholder="数字を入力" />
+  <button onclick="check()">決定！</button>
+  <div id="message"></div>
+  <div id="score">試行回数: <span id="attempts">0</span></div>
 
   <script>
-    let answer;
-    let attempts;
-    let maxNumber;
+    let answer = Math.floor(Math.random() * 100) + 1;
+    let attempts = 0;
 
-    function startGame() {
-      maxNumber = parseInt(document.getElementById("difficulty").value);
-      answer = Math.floor(Math.random() * maxNumber) + 1;
-      attempts = 0;
-      document.getElementById("result").textContent = `1〜${maxNumber} の間で数を当ててください。`;
-      document.getElementById("guessInput").value = "";
-    }
-
-    function checkGuess() {
-      const guess = parseInt(document.getElementById("guessInput").value);
-      const resultDiv = document.getElementById("result");
+    function check() {
+      const guess = Number(document.getElementById("guess").value);
       attempts++;
+      document.getElementById("attempts").textContent = attempts;
 
-      if (isNaN(guess) || guess < 1 || guess > maxNumber) {
-        resultDiv.textContent = `1〜${maxNumber} の正しい数字を入力してください。`;
-        return;
-      }
-
-      if (guess < answer) {
-        resultDiv.textContent = "小さすぎます！";
-      } else if (guess > answer) {
-        resultDiv.textContent = "大きすぎます！";
+      if (guess === answer) {
+        document.getElementById("message").textContent = "正解！おめでとう🎉";
+      } else if (guess < answer) {
+        document.getElementById("message").textContent = "もっと大きいです";
       } else {
-        resultDiv.innerHTML = `🎉 正解！答えは ${answer} でした。<br>試行回数: ${attempts} 回`;
+        document.getElementById("message").textContent = "もっと小さいです";
       }
     }
-
-    // ページ読み込み時に初期化
-    window.onload = startGame;
   </script>
-
 </body>
 </html>
